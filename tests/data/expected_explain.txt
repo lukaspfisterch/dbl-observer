@@ -1,0 +1,2 @@
+event_id=1 source=adapter-a artifact=record canon_len=7 digest=sha256:015abd7f5cc57a2dd94b7590f04ad8084273905ee33ec5cebeae62276a97f862 diagnostics=[]
+event_id=3 source=adapter-a artifact=record canon_len=7 digest=sha256:0ab1a6d394cd30195f0642b67ae1180c375ffadf5dd7f39c390668b5fdb6da93 diagnostics=[ordering_gap_observed]

@@ -1,0 +1,2 @@
+{"event_id":1,"source":"adapter-a","artifact":"record","payload":{"a":1}}
+{"event_id":3,"source":"adapter-a","artifact":"record","payload":{"b":2}}
