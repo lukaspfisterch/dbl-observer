@@ -38,7 +38,8 @@ Gateway quick start:
 ```powershell
 python -m dbl_observer.cli --mode gateway
 python -m dbl_observer.cli --mode gateway --follow
-python -m dbl_observer.cli --mode gateway --gateway-url http://127.0.0.1:8010 --stream-id default
+python -m dbl_observer.cli --mode gateway --gateway-url http://127.0.0.1:8010 --stream-id default --limit 50
+python -m dbl_observer.cli --mode gateway --limit 50
 ```
 
 ## Tests
