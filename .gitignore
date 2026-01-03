@@ -25,6 +25,7 @@ dist/
 
 # Test / tooling caches
 .pytest_cache/
+.venv/
 .cache/
 .mypy_cache/
 .ruff_cache/

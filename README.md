@@ -34,6 +34,13 @@ Contracts are the primary API:
 - `summary`: trace summary counts
 - `gateway`: read dbl-gateway snapshot and render observation-only lines
 
+Gateway quick start:
+```powershell
+python -m dbl_observer.cli --mode gateway
+python -m dbl_observer.cli --mode gateway --follow
+python -m dbl_observer.cli --mode gateway --gateway-url http://127.0.0.1:8010 --stream-id default
+```
+
 ## Tests
 - Determinism and replay visibility
 - Observational non-interference
