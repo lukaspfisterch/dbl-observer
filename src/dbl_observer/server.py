@@ -5,6 +5,7 @@ import os
 from typing import Any, Mapping
 
 from fastapi import Body, FastAPI, HTTPException, Query
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from .project import project_raw_items, parse_trace_items, project_snapshot_envelope
@@ -13,6 +14,27 @@ from .render import explain_lines, summary_lines
 
 def create_app() -> FastAPI:
     app = FastAPI(title="DBL Observer UI Server")
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+
+    @app.get("/")
+    def root() -> dict[str, object]:
+        return {
+            "status": "ok",
+            "service": "dbl-observer-server",
+            "endpoints": [
+                "GET /healthz",
+                "POST /project",
+                "POST /explain",
+                "POST /summary",
+                "GET /tail?stream_id=default&since=0",
+            ],
+        }
 
     @app.get("/healthz")
     def healthz() -> dict[str, str]:
@@ -125,3 +147,7 @@ def main() -> None:
     args = parser.parse_args()
 
     uvicorn.run(create_app(), host=args.host, port=args.port, reload=False)
+
+
+if __name__ == "__main__":
+    main()
