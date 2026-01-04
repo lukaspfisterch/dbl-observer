@@ -33,6 +33,7 @@ Contracts are the primary API:
 - `diff`: comparison against a reference trace
 - `summary`: trace summary counts
 - `gateway`: read dbl-gateway snapshot and render observation-only lines
+- `server`: HTTP UI wire endpoints for observer outputs
 
 Gateway quick start:
 ```powershell
@@ -40,6 +41,12 @@ python -m dbl_observer.cli --mode gateway
 python -m dbl_observer.cli --mode gateway --follow
 python -m dbl_observer.cli --mode gateway --gateway-url http://127.0.0.1:8010 --stream-id default --limit 50
 python -m dbl_observer.cli --mode gateway --limit 50
+```
+
+Observer UI server:
+```powershell
+$env:OBSERVER_GATEWAY_BASE_URL="http://127.0.0.1:8010"
+dbl-observer-server --host 127.0.0.1 --port 8020
 ```
 
 ## Tests

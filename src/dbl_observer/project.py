@@ -31,6 +31,26 @@ def read_events(stream: IO[str], expect_raw: bool) -> List[ObservationEvent]:
     return events
 
 
+def project_raw_items(items: list[dict[str, Any]]) -> List[ObservationEvent]:
+    events: List[ObservationEvent] = []
+    for idx, obj in enumerate(items, start=1):
+        events.append(_parse_event(obj, expect_raw=True, line_no=idx))
+    return events
+
+
+def parse_trace_items(items: list[dict[str, Any]]) -> List[ObservationEvent]:
+    events: List[ObservationEvent] = []
+    for idx, obj in enumerate(items, start=1):
+        events.append(_parse_event(obj, expect_raw=False, line_no=idx))
+    return events
+
+
+def project_snapshot_envelope(obj: dict[str, Any]) -> List[ObservationEvent]:
+    if not _is_snapshot_envelope(obj):
+        raise ValueError("not a snapshot envelope")
+    return _parse_snapshot_envelope(obj, line_no=1)
+
+
 def write_events(events: Iterable[ObservationEvent], stream: IO[str]) -> None:
     for event in events:
         obj = {

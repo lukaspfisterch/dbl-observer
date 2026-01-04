@@ -16,6 +16,8 @@ Processing contracts:
 
 CLI contracts:
 - CLI flags, modes, exit codes, and I/O behavior (v1, stable)
+UI contracts:
+- UI wire protocol (v1, stable)
 
 ## Versioning policy
 v1 is strict and schema-locked. Unknown fields are rejected.
