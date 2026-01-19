@@ -28,7 +28,11 @@ class TurnSummary:
 
 @dataclass
 class ThreadSummary:
-    """Aggregate view of a thread (conversation)."""
+    """Aggregate view of a thread (conversation).
+    
+    Note: Thread-local latency quantiles are not computed here.
+    Use LatencyProfile from ProjectionIndex.get_latency_profile() for system-wide latency.
+    """
     thread_id: str
     first_index: int = -1
     last_index: int = -1
@@ -36,7 +40,6 @@ class ThreadSummary:
     deny_total: int = 0
     allow_total: int = 0
     execution_error_total: int = 0
-    p95_latency_ms: Optional[float] = None
     top_intent_types: List[tuple[str, int]] = field(default_factory=list)
     top_reason_codes: List[tuple[str, int]] = field(default_factory=list)
 

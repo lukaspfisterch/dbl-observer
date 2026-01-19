@@ -41,6 +41,7 @@ class ProjectionIndex:
         self._latency_samples: List[float] = []
         self._intent_type_counts: Counter[str] = Counter()
         self._reason_code_counts: Counter[str] = Counter()
+        self._event_count: int = 0
 
     def feed(self, event: ObservedEvent) -> None:
         """Process a single event to update projections.
@@ -48,6 +49,7 @@ class ProjectionIndex:
         Thread-safe. Events should be fed in gateway index order.
         """
         with self._lock:
+            self._event_count += 1
             self._upsert_turn(event)
             self._upsert_thread(event)
             self._upsert_actor(event)
@@ -118,7 +120,7 @@ class ProjectionIndex:
             latency = self.get_latency_profile() if self._latency_samples else None
             
             return {
-                "event_count": sum(len([1 for t in self._turns.values()]) for _ in [1]),  # approx
+                "event_count": self._event_count,
                 "thread_count": len(self._threads),
                 "turn_count": total_turns,
                 "deny_total": total_deny,

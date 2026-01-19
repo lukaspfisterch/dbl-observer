@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 import os
-from typing import Any, Mapping
+from typing import Any
 
 from fastapi import Body, FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
@@ -222,6 +222,10 @@ def create_app() -> FastAPI:
         
         Accepts {"events": [...]} from gateway snapshot format.
         Events are converted to ObservedEvent, stored, and projected.
+        
+        INVARIANT: Events must be ingested in gateway index order.
+        No reordering is performed. ProjectionIndex expects monotonically
+        increasing indices for correct aggregation.
         """
         events = body.get("events")
         if not isinstance(events, list):

@@ -1,6 +1,7 @@
 
 # Local workflow
-inventory.md
+inventory_*.md
+agents.md
 
 # OS / editor
 Thumbs.db
