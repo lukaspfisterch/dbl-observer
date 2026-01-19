@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "dbl-observer"
-version = "0.2.0"
+version = "0.3.1"
 description = "Observation-only visibility over KL/DBL artifacts."
 readme = "README.md"
 requires-python = ">=3.10"

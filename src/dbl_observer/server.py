@@ -10,6 +10,15 @@ from fastapi.responses import JSONResponse
 
 from .project import project_raw_items, parse_trace_items, project_snapshot_envelope
 from .render import explain_lines, summary_lines
+from .core.event_types import ObservedEvent
+from .core.event_store import EventStore
+from .core.projection_index import ProjectionIndex
+from .core.signal_engine import SignalEngine
+
+# Global instances (single writer context)
+_event_store = EventStore()
+_projection_index = ProjectionIndex()
+_signal_engine = SignalEngine()
 
 
 def create_app() -> FastAPI:
@@ -33,6 +42,11 @@ def create_app() -> FastAPI:
                 "POST /explain",
                 "POST /summary",
                 "GET /tail?stream_id=default&since=0",
+                "GET /status",
+                "GET /threads",
+                "GET /threads/{thread_id}",
+                "GET /signals",
+                "POST /ingest",
             ],
         }
 
@@ -104,6 +118,125 @@ def create_app() -> FastAPI:
             if isinstance(last, int):
                 next_cursor = last + 1
         return {"version": "ui.v1.tail", "items": items, "next_cursor": next_cursor}
+
+    # --- Observability Endpoints (v1) ---
+
+    @app.get("/status")
+    def status() -> dict[str, Any]:
+        """System-level metrics snapshot."""
+        metrics = _projection_index.get_system_metrics()
+        signals = _signal_engine.evaluate(_projection_index)
+        signal_counts = {"info": 0, "warn": 0, "critical": 0}
+        for s in signals:
+            signal_counts[s.severity.value] += 1
+        
+        return {
+            "observer_version": 1,
+            "event_count": _event_store.count(),
+            "last_index": _event_store.last_index(),
+            "thread_count": metrics["thread_count"],
+            "turn_count": metrics["turn_count"],
+            "deny_rate": metrics["deny_rate"],
+            "latency_ms": metrics["latency"],
+            "active_signals": signal_counts,
+        }
+
+    @app.get("/threads")
+    def list_threads() -> dict[str, Any]:
+        """List all thread summaries."""
+        threads = _projection_index.list_threads()
+        return {
+            "observer_version": 1,
+            "threads": [
+                {
+                    "thread_id": t.thread_id,
+                    "turns_total": t.turns_total,
+                    "deny_total": t.deny_total,
+                    "allow_total": t.allow_total,
+                    "execution_error_total": t.execution_error_total,
+                    "first_index": t.first_index,
+                    "last_index": t.last_index,
+                }
+                for t in threads
+            ],
+        }
+
+    @app.get("/threads/{thread_id}")
+    def get_thread(thread_id: str) -> dict[str, Any]:
+        """Get single thread summary with its turns."""
+        thread = _projection_index.get_thread(thread_id)
+        if thread is None:
+            raise HTTPException(status_code=404, detail="thread not found")
+        turns = _projection_index.list_turns_for_thread(thread_id)
+        return {
+            "observer_version": 1,
+            "thread": {
+                "thread_id": thread.thread_id,
+                "turns_total": thread.turns_total,
+                "deny_total": thread.deny_total,
+                "allow_total": thread.allow_total,
+                "execution_error_total": thread.execution_error_total,
+                "first_index": thread.first_index,
+                "last_index": thread.last_index,
+            },
+            "turns": [
+                {
+                    "turn_id": t.turn_id,
+                    "parent_turn_id": t.parent_turn_id,
+                    "decision_result": t.decision_result,
+                    "reason_codes": t.reason_codes,
+                    "latency_ms": t.latency_ms,
+                    "has_execution": t.has_execution,
+                    "has_errors": t.has_errors,
+                    "first_index": t.first_index,
+                    "last_index": t.last_index,
+                }
+                for t in turns
+            ],
+        }
+
+    @app.get("/signals")
+    def list_signals() -> dict[str, Any]:
+        """List current active signals (NON_NORMATIVE attention markers)."""
+        signals = _signal_engine.evaluate(_projection_index)
+        return {
+            "observer_version": 1,
+            "signals": [
+                {
+                    "id": s.id,
+                    "severity": s.severity.value,
+                    "scope": s.scope,
+                    "key": s.key,
+                    "title": s.title,
+                    "detail": s.detail,
+                    "at_index": s.at_index,
+                    "evidence": s.evidence,
+                }
+                for s in signals
+            ],
+        }
+
+    @app.post("/ingest")
+    def ingest(body: dict[str, Any] = Body(...)) -> dict[str, Any]:
+        """Ingest gateway events into the observer store.
+        
+        Accepts {"events": [...]} from gateway snapshot format.
+        Events are converted to ObservedEvent, stored, and projected.
+        """
+        events = body.get("events")
+        if not isinstance(events, list):
+            raise HTTPException(status_code=400, detail="events must be list")
+        
+        ingested = 0
+        for raw in events:
+            if not isinstance(raw, dict):
+                continue
+            observed = ObservedEvent.from_gateway_event(raw)
+            _event_store.append(observed)
+            _projection_index.feed(observed)
+            ingested += 1
+        
+        return {"observer_version": 1, "ingested": ingested, "total": _event_store.count()}
 
     return app
 
