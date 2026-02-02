@@ -2,11 +2,12 @@ from __future__ import annotations
 
 import json
 import os
+from pathlib import Path
 from typing import Any
 
 from fastapi import Body, FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse
 
 from .project import project_raw_items, parse_trace_items, project_snapshot_envelope
 from .render import explain_lines, summary_lines
@@ -47,8 +48,15 @@ def create_app() -> FastAPI:
                 "GET /threads/{thread_id}",
                 "GET /signals",
                 "POST /ingest",
+                "GET /ui",
             ],
         }
+
+    @app.get("/ui", response_class=HTMLResponse)
+    def ui() -> HTMLResponse:
+        base_dir = Path(__file__).parent
+        ui_path = base_dir / "ui.html"
+        return HTMLResponse(ui_path.read_text(encoding="utf-8"))
 
     @app.get("/healthz")
     def healthz() -> dict[str, str]:

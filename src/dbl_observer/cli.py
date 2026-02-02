@@ -34,17 +34,20 @@ def main(argv: Optional[list[str]] = None) -> int:
     if args.mode == "gateway":
         try:
             with _open_output(args.output) as output_stream:
-                for event in observe_gateway(
-                    base_url=args.gateway_url,
-                    stream_id=args.stream_id,
-                    lane=args.lane,
-                    limit=args.limit,
-                    follow=args.follow,
-                    poll_interval=args.poll_interval,
-                ):
-                    line = render_gateway_event(event, output_format=args.format)
-                    output_stream.write(line)
-                    output_stream.write("\n")
+                try:
+                    for event in observe_gateway(
+                        base_url=args.gateway_url,
+                        stream_id=args.stream_id,
+                        lane=args.lane,
+                        limit=args.limit,
+                        follow=args.follow,
+                        poll_interval=args.poll_interval,
+                    ):
+                        line = render_gateway_event(event, output_format=args.format)
+                        output_stream.write(line)
+                        output_stream.write("\n")
+                except KeyboardInterrupt:
+                    return 0
         except Exception:
             return 2
         return 0

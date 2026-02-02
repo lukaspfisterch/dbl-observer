@@ -1,0 +1,396 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>DBL Observer</title>
+  <style>
+    :root {
+      --bg: #f5f3ef;
+      --panel: #ffffff;
+      --ink: #1f1b16;
+      --muted: #6e655d;
+      --border: #e3ded7;
+      --accent: #1f6feb;
+      --good: #1a7f37;
+      --warn: #b08800;
+      --bad: #a5311d;
+    }
+    * { box-sizing: border-box; font-family: "Iosevka", "IBM Plex Mono", "JetBrains Mono", monospace; }
+    body { margin: 0; background: var(--bg); color: var(--ink); }
+    header { padding: 16px 20px; border-bottom: 1px solid var(--border); background: #fff7ea; }
+    header h1 { margin: 0; font-size: 18px; letter-spacing: 0.3px; }
+    .container { padding: 16px 20px; display: grid; gap: 12px; }
+    .toolbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+    .toolbar label { font-size: 12px; color: var(--muted); }
+    select, input[type="text"] { padding: 6px 8px; border: 1px solid var(--border); border-radius: 6px; background: #fff; }
+    button { padding: 6px 10px; border: 1px solid var(--border); border-radius: 6px; background: #fff; cursor: pointer; }
+    button:hover { border-color: var(--accent); color: var(--accent); }
+    .event-list { display: grid; gap: 10px; }
+    .event-card { background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; }
+    .event-header { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+    .pill { font-size: 11px; padding: 2px 6px; border-radius: 6px; background: #f0ede7; color: var(--muted); }
+    .pill.kind { background: #e9f2ff; color: #1a4a8f; }
+    .pill.exec { background: #e9f7ef; color: var(--good); }
+    .pill.intent { background: #fff4e5; color: var(--warn); }
+    .pill.decision { background: #f0f0ff; color: #4b3fa1; }
+    .pill.proof { background: #f5e9ff; color: #6b2fb8; }
+    .mono { font-family: "Iosevka", "IBM Plex Mono", "JetBrains Mono", monospace; }
+    .meta { color: var(--muted); font-size: 12px; }
+    .primary { margin-top: 8px; font-size: 13px; }
+    .primary .label { color: var(--muted); font-size: 12px; }
+    .copy-btn { border: 1px solid var(--border); background: #fff; padding: 2px 6px; font-size: 11px; border-radius: 6px; cursor: pointer; }
+    details { margin-top: 8px; }
+    summary { cursor: pointer; color: var(--accent); font-size: 12px; }
+    pre { margin: 6px 0 0 0; padding: 10px; border: 1px dashed var(--border); background: #faf8f5; white-space: pre-wrap; font-size: 12px; }
+    .footer { color: var(--muted); font-size: 11px; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>DBL Observer</h1>
+  </header>
+  <div class="container">
+    <div class="toolbar">
+      <label>Kind</label>
+      <select id="filter-kind">
+        <option value="">ALL</option>
+        <option value="INTENT">INTENT</option>
+        <option value="DECISION">DECISION</option>
+        <option value="EXECUTION">EXECUTION</option>
+        <option value="PROOF">PROOF</option>
+      </select>
+      <label>Lane</label>
+      <select id="filter-lane">
+        <option value="">ALL</option>
+      </select>
+      <label>Search</label>
+      <input id="filter-text" type="text" placeholder="thread_id / turn_id / correlation_id / actor" />
+      <button id="toggle-sort">Sort: newest</button>
+      <button id="refresh">Refresh</button>
+      <span class="meta" id="status">Idle</span>
+    </div>
+    <div class="event-list" id="event-list"></div>
+    <div class="footer" id="footer"></div>
+  </div>
+
+  <script>
+    const state = {
+      events: new Map(),
+      cursor: 0,
+      sortDesc: true,
+      kind: '',
+      lane: '',
+      text: ''
+    };
+
+    const listEl = document.getElementById('event-list');
+    const statusEl = document.getElementById('status');
+    const footerEl = document.getElementById('footer');
+    const laneSelect = document.getElementById('filter-lane');
+
+    function setStatus(msg) {
+      statusEl.textContent = msg;
+    }
+
+    function shortText(text, max = 200) {
+      if (!text) return '';
+      if (text.length <= max) return text;
+      return text.slice(0, max) + '…';
+    }
+
+    function safeString(value) {
+      if (value === null || value === undefined) return '';
+      if (typeof value === 'string') return value;
+      return String(value);
+    }
+
+    function extractEvent(item) {
+      const gw = item.payload || {};
+      const payload = gw.payload || {};
+      const index = typeof gw.index === 'number' ? gw.index : (typeof item.event_id === 'number' ? item.event_id : -1);
+      const kind = gw.kind || '';
+      const lane = gw.lane || '';
+      const actor = gw.actor || '';
+      const threadId = gw.thread_id || '';
+      const turnId = gw.turn_id || '';
+      const correlationId = gw.correlation_id || payload.correlation_id || '';
+      const ts = gw.created_at || gw.ts || payload.created_at || payload.ts || '';
+      const digest = item.digest || '';
+      return { index, kind, lane, actor, threadId, turnId, correlationId, ts, digest, gw, payload, item };
+    }
+
+    function updateLaneOptions(events) {
+      const lanes = new Set();
+      for (const e of events) {
+        if (e.lane) lanes.add(e.lane);
+      }
+      const existing = new Set([...laneSelect.options].map(o => o.value));
+      for (const lane of lanes) {
+        if (!existing.has(lane)) {
+          const opt = document.createElement('option');
+          opt.value = lane;
+          opt.textContent = lane;
+          laneSelect.appendChild(opt);
+        }
+      }
+    }
+
+    function matchesFilters(e) {
+      if (state.kind && e.kind !== state.kind) return false;
+      if (state.lane && e.lane !== state.lane) return false;
+      if (state.text) {
+        const hay = [e.threadId, e.turnId, e.correlationId, e.actor].join(' ').toLowerCase();
+        if (!hay.includes(state.text.toLowerCase())) return false;
+      }
+      return true;
+    }
+
+    function kindClass(kind) {
+      if (kind === 'EXECUTION') return 'exec';
+      if (kind === 'INTENT') return 'intent';
+      if (kind === 'DECISION') return 'decision';
+      if (kind === 'PROOF') return 'proof';
+      return '';
+    }
+
+    function copyToClipboard(value) {
+      if (!value) return;
+      navigator.clipboard.writeText(value);
+    }
+
+    function renderEvent(e) {
+      const card = document.createElement('div');
+      card.className = 'event-card';
+
+      const header = document.createElement('div');
+      header.className = 'event-header';
+
+      const index = document.createElement('span');
+      index.className = 'pill';
+      index.textContent = `#${e.index}`;
+
+      const kind = document.createElement('span');
+      kind.className = `pill kind ${kindClass(e.kind)}`;
+      kind.textContent = e.kind || 'UNKNOWN';
+
+      const lane = document.createElement('span');
+      lane.className = 'pill';
+      lane.textContent = `lane:${e.lane || '-'}`;
+
+      const actor = document.createElement('span');
+      actor.className = 'pill';
+      actor.textContent = `actor:${e.actor || '-'}`;
+
+      const thread = document.createElement('span');
+      thread.className = 'pill mono';
+      thread.textContent = `thread:${e.threadId || '-'}`;
+
+      const turn = document.createElement('span');
+      turn.className = 'pill mono';
+      turn.textContent = `turn:${e.turnId || '-'}`;
+
+      const corr = document.createElement('span');
+      corr.className = 'pill mono';
+      corr.textContent = `corr:${e.correlationId || '-'}`;
+
+      const ts = document.createElement('span');
+      ts.className = 'pill meta';
+      ts.textContent = e.ts || '-';
+
+      const digest = document.createElement('span');
+      digest.className = 'pill mono';
+      digest.textContent = `digest:${(e.digest || '').slice(0, 10) || '-'}`;
+
+      header.appendChild(index);
+      header.appendChild(kind);
+      header.appendChild(lane);
+      header.appendChild(actor);
+      header.appendChild(thread);
+      header.appendChild(turn);
+      header.appendChild(corr);
+      header.appendChild(ts);
+      header.appendChild(digest);
+
+      if (e.correlationId) {
+        const copy = document.createElement('button');
+        copy.className = 'copy-btn';
+        copy.textContent = 'copy corr';
+        copy.onclick = () => copyToClipboard(e.correlationId);
+        header.appendChild(copy);
+      }
+      if (e.turnId) {
+        const copy = document.createElement('button');
+        copy.className = 'copy-btn';
+        copy.textContent = 'copy turn';
+        copy.onclick = () => copyToClipboard(e.turnId);
+        header.appendChild(copy);
+      }
+      if (e.digest) {
+        const copy = document.createElement('button');
+        copy.className = 'copy-btn';
+        copy.textContent = 'copy digest';
+        copy.onclick = () => copyToClipboard(e.digest);
+        header.appendChild(copy);
+      }
+
+      card.appendChild(header);
+
+      const primary = document.createElement('div');
+      primary.className = 'primary';
+      const payload = e.payload || {};
+      const addField = (labelText, valueText) => {
+        const label = document.createElement('div');
+        label.className = 'label';
+        label.textContent = labelText;
+        const value = document.createElement('div');
+        value.textContent = valueText || '-';
+        primary.appendChild(label);
+        primary.appendChild(value);
+      };
+      if (e.kind === 'EXECUTION') {
+        const output = safeString(payload.output_text || payload.output || '');
+        const failure = safeString(payload.failure_code || (payload.error && payload.error.message) || payload.error || '');
+        addField('output', shortText(output, 200));
+        if (failure) {
+          addField('error', shortText(failure, 200));
+        }
+      } else if (e.kind === 'INTENT') {
+        const message = safeString(payload.user_input || payload.message || payload.input_text || payload.input || '');
+        addField('input', shortText(message, 200));
+      } else if (e.kind === 'DECISION') {
+        const decision = safeString(payload.decision || payload.decision_result || payload.result || payload.allowed || '');
+        const reasons = Array.isArray(payload.reason_codes) ? payload.reason_codes.join(', ') : safeString(payload.reason_code || '');
+        addField('decision', decision);
+        if (reasons) {
+          addField('reasons', shortText(reasons, 200));
+        }
+      }
+      if (primary.childNodes.length) {
+        card.appendChild(primary);
+      }
+
+      const payloadDetail = document.createElement('details');
+      payloadDetail.setAttribute('data-detail-key', `${e.index}:payload`);
+      const payloadSummary = document.createElement('summary');
+      payloadSummary.textContent = 'Payload';
+      payloadDetail.appendChild(payloadSummary);
+      const payloadPre = document.createElement('pre');
+      payloadPre.textContent = JSON.stringify(payload, null, 2);
+      payloadDetail.appendChild(payloadPre);
+      card.appendChild(payloadDetail);
+
+      if (payload._obs) {
+        const obsDetail = document.createElement('details');
+        obsDetail.setAttribute('data-detail-key', `${e.index}:_obs`);
+        const obsSummary = document.createElement('summary');
+        obsSummary.textContent = 'payload._obs';
+        obsDetail.appendChild(obsSummary);
+        const obsPre = document.createElement('pre');
+        obsPre.textContent = JSON.stringify(payload._obs, null, 2);
+        obsDetail.appendChild(obsPre);
+        card.appendChild(obsDetail);
+      }
+
+      const extraKeys = ['trace', 'kernel_meta', 'metadata'];
+      for (const key of extraKeys) {
+        if (payload[key]) {
+          const d = document.createElement('details');
+          d.setAttribute('data-detail-key', `${e.index}:${key}`);
+          const s = document.createElement('summary');
+          s.textContent = key;
+          d.appendChild(s);
+          const pre = document.createElement('pre');
+          pre.textContent = JSON.stringify(payload[key], null, 2);
+          d.appendChild(pre);
+          card.appendChild(d);
+        }
+      }
+
+      const rawDetail = document.createElement('details');
+      rawDetail.setAttribute('data-detail-key', `${e.index}:raw`);
+      const rawSummary = document.createElement('summary');
+      rawSummary.textContent = 'Raw JSON';
+      rawDetail.appendChild(rawSummary);
+      const rawPre = document.createElement('pre');
+      rawPre.textContent = JSON.stringify(e.item, null, 2);
+      rawDetail.appendChild(rawPre);
+      card.appendChild(rawDetail);
+
+      return card;
+    }
+
+    function render() {
+      const all = [...state.events.values()].map(extractEvent).filter(matchesFilters);
+      updateLaneOptions(all);
+      all.sort((a, b) => state.sortDesc ? b.index - a.index : a.index - b.index);
+      const openDetails = new Set();
+      document.querySelectorAll('details[open][data-detail-key]').forEach((el) => {
+        openDetails.add(el.getAttribute('data-detail-key'));
+      });
+      listEl.innerHTML = '';
+      for (const e of all) {
+        const card = renderEvent(e);
+        card.querySelectorAll('details[data-detail-key]').forEach((el) => {
+          if (openDetails.has(el.getAttribute('data-detail-key'))) {
+            el.open = true;
+          }
+        });
+        listEl.appendChild(card);
+      }
+      footerEl.textContent = `${all.length} events shown`;
+    }
+
+    async function fetchTail() {
+      const isReading = document.querySelector('details[open]') || document.activeElement?.tagName === 'INPUT' || document.activeElement?.tagName === 'TEXTAREA';
+      if (isReading) {
+        setStatus('Paused (reading)');
+        return;
+      }
+      setStatus('Loading...');
+      const resp = await fetch(`/tail?stream_id=default&since=${state.cursor}`);
+      const data = await resp.json();
+      if (data && data.items) {
+        for (const item of data.items) {
+          if (typeof item.event_id === 'number') {
+            state.events.set(item.event_id, item);
+          }
+        }
+        if (typeof data.next_cursor === 'number') {
+          state.cursor = data.next_cursor;
+        }
+      }
+      setStatus('Idle');
+      render();
+    }
+
+    document.getElementById('toggle-sort').addEventListener('click', () => {
+      state.sortDesc = !state.sortDesc;
+      document.getElementById('toggle-sort').textContent = state.sortDesc ? 'Sort: newest' : 'Sort: oldest';
+      render();
+    });
+
+    document.getElementById('refresh').addEventListener('click', () => {
+      fetchTail();
+    });
+
+    document.getElementById('filter-kind').addEventListener('change', (e) => {
+      state.kind = e.target.value;
+      render();
+    });
+
+    document.getElementById('filter-lane').addEventListener('change', (e) => {
+      state.lane = e.target.value;
+      render();
+    });
+
+    document.getElementById('filter-text').addEventListener('input', (e) => {
+      state.text = e.target.value.trim();
+      render();
+    });
+
+    fetchTail();
+    setInterval(fetchTail, 2000);
+  </script>
+</body>
+</html>

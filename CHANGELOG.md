@@ -60,3 +60,11 @@ Invoke-RestMethod -Uri "http://localhost:8020/ingest" -Method POST -Body ($snaps
 # View status
 curl http://localhost:8020/status
 ```
+
+## [0.3.2] - 2026-02-02
+
+### Added
+- `GET /ui`: Structured, filterable event viewer with collapsible payload sections.
+
+### Fixed
+- CLI gateway follow now exits cleanly on Ctrl+C.

@@ -1,0 +1,190 @@
+[
+  {
+    "path": ".gitignore",
+    "size": 390
+  },
+  {
+    "path": "CHANGELOG.md",
+    "size": 2675
+  },
+  {
+    "path": "README.md",
+    "size": 5643
+  },
+  {
+    "path": "docs/contracts/canonicalization.md",
+    "size": 674
+  },
+  {
+    "path": "docs/contracts/cli.md",
+    "size": 3239
+  },
+  {
+    "path": "docs/contracts/compatibility.md",
+    "size": 654
+  },
+  {
+    "path": "docs/contracts/conceptual.md",
+    "size": 255
+  },
+  {
+    "path": "docs/contracts/diagnostics.md",
+    "size": 1646
+  },
+  {
+    "path": "docs/contracts/digest.md",
+    "size": 319
+  },
+  {
+    "path": "docs/contracts/index.md",
+    "size": 739
+  },
+  {
+    "path": "docs/contracts/raw-input.md",
+    "size": 850
+  },
+  {
+    "path": "docs/contracts/ui-wire.md",
+    "size": 1833
+  },
+  {
+    "path": "docs/contracts/wire.md",
+    "size": 1091
+  },
+  {
+    "path": "docs/design.md",
+    "size": 1584
+  },
+  {
+    "path": "pyproject.toml",
+    "size": 518
+  },
+  {
+    "path": "src/dbl_observer/__init__.py",
+    "size": 68
+  },
+  {
+    "path": "src/dbl_observer/canon.py",
+    "size": 1243
+  },
+  {
+    "path": "src/dbl_observer/cli.py",
+    "size": 3772
+  },
+  {
+    "path": "src/dbl_observer/core/__init__.py",
+    "size": 62
+  },
+  {
+    "path": "src/dbl_observer/core/event_store.py",
+    "size": 4073
+  },
+  {
+    "path": "src/dbl_observer/core/event_types.py",
+    "size": 2594
+  },
+  {
+    "path": "src/dbl_observer/core/projection_index.py",
+    "size": 10860
+  },
+  {
+    "path": "src/dbl_observer/core/projection_types.py",
+    "size": 2170
+  },
+  {
+    "path": "src/dbl_observer/core/signal_engine.py",
+    "size": 6449
+  },
+  {
+    "path": "src/dbl_observer/core/signal_types.py",
+    "size": 854
+  },
+  {
+    "path": "src/dbl_observer/diagnostics.py",
+    "size": 3119
+  },
+  {
+    "path": "src/dbl_observer/digest.py",
+    "size": 220
+  },
+  {
+    "path": "src/dbl_observer/gateway.py",
+    "size": 2967
+  },
+  {
+    "path": "src/dbl_observer/model.py",
+    "size": 717
+  },
+  {
+    "path": "src/dbl_observer/project.py",
+    "size": 6765
+  },
+  {
+    "path": "src/dbl_observer/render.py",
+    "size": 1915
+  },
+  {
+    "path": "src/dbl_observer/server.py",
+    "size": 10496
+  },
+  {
+    "path": "tests/data/expected_diagnostic.txt",
+    "size": 399
+  },
+  {
+    "path": "tests/data/expected_diff.txt",
+    "size": 0
+  },
+  {
+    "path": "tests/data/expected_explain.txt",
+    "size": 321
+  },
+  {
+    "path": "tests/data/raw_input.jsonl",
+    "size": 148
+  },
+  {
+    "path": "tests/data/trace_input.jsonl",
+    "size": 376
+  },
+  {
+    "path": "tests/test_canonicalization_contract.py",
+    "size": 827
+  },
+  {
+    "path": "tests/test_cli_contract.py",
+    "size": 6040
+  },
+  {
+    "path": "tests/test_cli_golden_output.py",
+    "size": 2691
+  },
+  {
+    "path": "tests/test_contract_status.py",
+    "size": 399
+  },
+  {
+    "path": "tests/test_determinism.py",
+    "size": 2061
+  },
+  {
+    "path": "tests/test_diagnostics_vocabulary.py",
+    "size": 549
+  },
+  {
+    "path": "tests/test_diff_contract.py",
+    "size": 1796
+  },
+  {
+    "path": "tests/test_observation_non_interference.py",
+    "size": 691
+  },
+  {
+    "path": "tests/test_projections.py",
+    "size": 7202
+  },
+  {
+    "path": "tests/test_trace_identity.py",
+    "size": 1702
+  }
+]

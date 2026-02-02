@@ -103,6 +103,7 @@ and diagnostics without introducing normativity or execution.
 |----------|-------------|
 | `GET /` | Endpoint list |
 | `GET /docs` | Swagger UI (interactive API docs) |
+| `GET /ui` | Structured event viewer (browser UI) |
 | `GET /healthz` | Health check |
 | `GET /status` | System metrics |
 | `GET /threads` | List thread summaries |

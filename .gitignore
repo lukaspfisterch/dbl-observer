@@ -1,7 +1,7 @@
 
-# Local workflow
+# Local-only artifacts
 inventory_*.md
-agents.md
+SESSION_NOTES.md
 
 # OS / editor
 Thumbs.db
@@ -16,7 +16,9 @@ __pycache__/
 .venv/
 venv/
 env/
-.env/
+
+# Environment files
+.env
 
 # Packaging / build
 build/
@@ -26,7 +28,6 @@ dist/
 
 # Test / tooling caches
 .pytest_cache/
-.venv/
 .cache/
 .mypy_cache/
 .ruff_cache/
