@@ -291,6 +291,8 @@ def main() -> None:
     parser.add_argument("--port", type=int, default=8020)
     args = parser.parse_args()
 
+    ui_url = f"http://{args.host}:{args.port}/ui"
+    print(f"Observer UI: {ui_url}")
     uvicorn.run(create_app(), host=args.host, port=args.port, reload=False)
 
 
